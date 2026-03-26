@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OpenCTI Report Generator — Telecom Threat Intelligence</title>
+  <style>
+    :root {
+      --bg:       #0d0d1a;
+      --card:     #1a1a2e;
+      --accent:   #7c83fd;
+      --accent2:  #e94560;
+      --text:     #e0e0e0;
+      --muted:    #888;
+      --border:   #2a2a4a;
+      --green:    #4caf88;
+      --orange:   #f0a500;
+      --red:      #e94560;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    header {
+      background: var(--card);
+      border-bottom: 2px solid var(--accent);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: 1px; }
+    header span { color: var(--muted); font-size: 0.85rem; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .number { font-size: 2.2rem; font-weight: bold; color: var(--accent); }
+    .stat-card .label  { font-size: 0.8rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; }
+
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-header h2 { font-size: 1.1rem; color: var(--accent); }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity .2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn.danger { background: var(--accent2); }
+    .btn.success { background: var(--green); }
+    .btn.sm { padding: 5px 12px; font-size: 0.78rem; }
+
+    .scheduler-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .scheduler-bar .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+    .scheduler-bar .dot.active { background: var(--green); }
+    .scheduler-bar .status-text { font-size: 0.9rem; flex: 1; }
+
+    .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .report-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .report-card .report-name { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    .report-card .report-meta { font-size: 0.78rem; color: var(--muted); }
+    .report-card .actions { display: flex; gap: 8px; align-items: center; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge.daily    { background: #1a3a2a; color: var(--green); }
+    .badge.weekly   { background: #1a2a3a; color: var(--accent); }
+    .badge.monthly  { background: #2a1a3a; color: #b088fd; }
+
+    .generated-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .generated-table th {
+      background: var(--border);
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .generated-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .generated-table tr:hover td { background: rgba(124,131,253,0.07); }
+
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: none;
+      z-index: 999;
+    }
+    .toast.show { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .jobs-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 24px;
+      display: none;
+    }
+    .jobs-panel.open { display: block; }
+    .jobs-panel table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+    .jobs-panel td, .jobs-panel th { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    .jobs-panel th { color: var(--muted); text-align: left; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>&#x1F6E1; OpenCTI Threat Intelligence Report Generator</h1>
+  <span>Telecom &amp; ISP Security | Powered by Claude AI</span>
+</header>
+
+<div class="container">
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="number" id="stat-total">14</div>
+      <div class="label">Report Types</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="stat-generated">{{ reports|length }}</div>
+      <div class="label">Reports Generated</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="stat-scheduler">—</div>
+      <div class="label">Scheduler Status</div>
+    </div>
+    <div class="stat-card">
+      <div class="number" id="stat-jobs">—</div>
+      <div class="label">Scheduled Jobs</div>
+    </div>
+  </div>
+
+  <!-- Scheduler Bar -->
+  <div class="scheduler-bar">
+    <div class="dot" id="scheduler-dot"></div>
+    <div class="status-text" id="scheduler-status-text">Checking scheduler…</div>
+    <button class="btn success sm" onclick="schedulerAction('start')">Start Scheduler</button>
+    <button class="btn danger sm" onclick="schedulerAction('stop')">Stop Scheduler</button>
+    <button class="btn sm" onclick="toggleJobs()">View Jobs</button>
+  </div>
+
+  <div class="jobs-panel" id="jobs-panel">
+    <h3 style="color:var(--accent);margin-bottom:12px;">Scheduled Jobs</h3>
+    <table id="jobs-table">
+      <tr><th>ID</th><th>Name</th><th>Next Run</th></tr>
+    </table>
+  </div>
+
+  <!-- Report Generators -->
+  <div class="section-header" style="margin-top:32px;">
+    <h2>&#x26A1; Report Generators</h2>
+    <button class="btn" onclick="generateAll()">&#x25B6; Run All Reports Now</button>
+  </div>
+
+  <div class="reports-grid">
+    {% set generators = [
+      ("executive_briefing",  "Executive Weekly Briefing",          "weekly"),
+      ("bgp_hijacking",       "BGP Hijacking Monitor",              "daily"),
+      ("cve_report",          "Telecom Vendor CVE Report",          "weekly"),
+      ("ss7_report",          "SS7/Diameter/GTP Threats",           "monthly"),
+      ("apt_report",          "APT Campaign Intelligence",          "monthly"),
+      ("ioc_watchlist",       "IOC Watchlist",                      "daily"),
+      ("ddos_report",         "DDoS Attack Intelligence",           "weekly"),
+      ("subscriber_report",   "Subscriber & Roaming Threats",       "weekly"),
+      ("fiveg_report",        "5G Security Threats",                "monthly"),
+      ("fraud_report",        "Telecom Fraud Intelligence",         "weekly"),
+      ("dark_web_report",     "Dark Web Monitoring",                "weekly"),
+      ("supply_chain_report", "Supply Chain Security",              "monthly"),
+      ("compliance_report",   "Regulatory Compliance",              "monthly"),
+      ("executive_profile",   "Executive Threat Profile",           "monthly"),
+    ] %}
+    {% for id, name, schedule in generators %}
+    <div class="report-card">
+      <div>
+        <span class="report-name">{{ name }}</span>
+        <span class="badge {{ schedule }}" style="margin-left:8px;">{{ schedule }}</span>
+      </div>
+      <div class="actions">
+        <button class="btn sm" onclick="generateReport('{{ id }}', '{{ name }}')">&#x25B6; Generate Now</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Generated Reports Table -->
+  <div class="section-header">
+    <h2>&#x1F4C4; Generated Reports</h2>
+    <button class="btn sm" onclick="refreshReports()">&#x21BB; Refresh</button>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+    <table class="generated-table" id="reports-table">
+      <thead>
+        <tr>
+          <th>Filename</th>
+          <th>Generated</th>
+          <th>Size</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="reports-tbody">
+        {% if reports %}
+          {% for r in reports %}
+          <tr>
+            <td>{{ r.filename }}</td>
+            <td>{{ r.generated }}</td>
+            <td>{{ r.size_kb }} KB</td>
+            <td><a href="/api/download/{{ r.filename }}" class="btn sm">&#x2B07; Download</a></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No reports yet. Click Generate to create reports.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function toast(msg, duration=3000) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), duration);
+  }
+
+  async function generateReport(id, name) {
+    toast(`Starting: ${name}…`);
+    const r = await fetch(`/api/generate/${id}`, {method:"POST"});
+    const j = await r.json();
+    if (j.status === "started") {
+      toast(`${name} — generation started. Refresh in ~30s.`, 4000);
+    } else {
+      toast(`Error: ${j.error || "unknown"}`);
+    }
+  }
+
+  async function generateAll() {
+    toast("Starting all 14 reports… this may take a few minutes.");
+    await fetch("/api/generate-all", {method:"POST"});
+  }
+
+  async function refreshReports() {
+    const r = await fetch("/api/reports");
+    const reports = await r.json();
+    const tbody = document.getElementById("reports-tbody");
+    if (!reports.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No reports yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = reports.map(r => `
+      <tr>
+        <td>${r.filename}</td>
+        <td>${r.generated}</td>
+        <td>${r.size_kb} KB</td>
+        <td><a href="/api/download/${r.filename}" class="btn sm">&#x2B07; Download</a></td>
+      </tr>
+    `).join("");
+    document.getElementById("stat-generated").textContent = reports.length;
+  }
+
+  async function checkScheduler() {
+    try {
+      const r = await fetch("/api/scheduler/status");
+      const j = await r.json();
+      const dot  = document.getElementById("scheduler-dot");
+      const text = document.getElementById("scheduler-status-text");
+      if (j.running) {
+        dot.classList.add("active");
+        text.textContent = `Scheduler RUNNING — ${j.jobs.length} jobs scheduled`;
+        document.getElementById("stat-scheduler").textContent = "ON";
+        document.getElementById("stat-jobs").textContent = j.jobs.length;
+        const tbody = document.querySelector("#jobs-table");
+        tbody.innerHTML = "<tr><th>ID</th><th>Name</th><th>Next Run</th></tr>" +
+          j.jobs.map(job => `<tr><td>${job.id}</td><td>${job.name}</td><td>${job.next_run}</td></tr>`).join("");
+      } else {
+        dot.classList.remove("active");
+        text.textContent = "Scheduler STOPPED — click Start to enable scheduled reports";
+        document.getElementById("stat-scheduler").textContent = "OFF";
+        document.getElementById("stat-jobs").textContent = "0";
+      }
+    } catch(e) {
+      document.getElementById("scheduler-status-text").textContent = "Scheduler status unavailable";
+    }
+  }
+
+  async function schedulerAction(action) {
+    await fetch(`/api/scheduler/${action}`, {method:"POST"});
+    toast(`Scheduler ${action}ed.`);
+    setTimeout(checkScheduler, 1000);
+  }
+
+  function toggleJobs() {
+    document.getElementById("jobs-panel").classList.toggle("open");
+  }
+
+  // Init
+  checkScheduler();
+  setInterval(checkScheduler, 30000);
+  setInterval(refreshReports, 60000);
+</script>
+</body>
+</html>
