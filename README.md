@@ -1,3 +1,15 @@
+<div align="center">
+
+# 🛡️ OpenCTI Report Generator
+
+Automated threat intelligence report generator for telecom/ISP operators — OpenCTI + Claude AI + PDF.
+
+![Python](https://img.shields.io/badge/python-3.10+-blue?logo=python) ![OpenCTI](https://img.shields.io/badge/OpenCTI-threat--intel-red) ![Claude AI](https://img.shields.io/badge/Claude-AI-orange) ![Last Commit](https://img.shields.io/github/last-commit/ehansih/opencti-report-generator)
+
+</div>
+
+---
+
 # OpenCTI Threat Intelligence Report Generator
 
 Automated PDF threat intelligence report generator for **Telecom Operators and ISPs**, powered by [OpenCTI](https://github.com/OpenCTI-Platform/opencti) and **Claude AI**.
