@@ -12,7 +12,7 @@ reportlab>=4.1.0
 flask>=3.0.0
 
 # Scheduling
-APScheduler>=3.10.0
+APScheduler>=3.11.2
 
 # Data / utilities
 requests>=2.31.0
